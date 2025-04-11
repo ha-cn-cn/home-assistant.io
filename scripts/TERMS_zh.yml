@@ -1,8 +1,13 @@
-# 当前仓库专用术语表
-repository: 仓库
-workflow: 工作流
-translation: 翻译
-documentation: 文档
+# 核心术语
+entity: 实体
+integration: 集成
+automation: 自动化
+sensor: 传感器
 configuration: 配置
-module: 模块
-plugin: 插件
+platform: 平台
+component: 组件
+
+# 保留内容
+Home Assistant: Home Assistant
+YAML: YAML
+JSON: JSON
