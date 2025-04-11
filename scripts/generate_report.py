@@ -1,45 +1,74 @@
 #!/usr/bin/env python3
+import json
 from pathlib import Path
-import markdown2
 from datetime import datetime
 
 
 def generate_html_report():
-    """生成HTML格式的报告"""
+    """生成包含所有验证结果的HTML报告"""
     css = """
     <style>
         body { font-family: Arial, sans-serif; margin: 2em; }
-        h1 { color: #333; }
-        .issue { padding: 10px; margin: 5px 0; border-radius: 3px; }
-        .missing { background-color: #ffeeee; border-left: 4px solid #ff4444; }
-        .untranslated { background-color: #ffffdd; border-left: 4px solid #ffcc00; }
-        .term { background-color: #eeffff; border-left: 4px solid #00dddd; }
-        .success { color: #00aa00; }
+        .issue { margin: 10px 0; padding: 10px; border-left: 4px solid; }
+        .missing { border-color: #ff4444; background: #ffeeee; }
+        .term { border-color: #ffcc00; background: #ffffdd; }
+        .structure { border-color: #00aaff; background: #eeffff; }
+        pre { background: #f5f5f5; padding: 10px; }
     </style>
     """
 
-    content = ["<h1>Translation Validation Report</h1>"]
-    content.append(f"<p>Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>")
+    report = [f"<h1>Translation Validation Report - {datetime.now().strftime('%Y-%m-%d')}</h1>"]
 
-    # 收集各检查结果
-    reports = {
-        "completeness": Path("report.md").read_text(encoding='utf-8') if Path("report.md").exists() else "",
-        "terms": Path("term_issues.txt").read_text(encoding='utf-8') if Path("term_issues.txt").exists() else "",
-        "structure": Path("structure_issues.txt").read_text(encoding='utf-8') if Path(
-            "structure_issues.txt").exists() else ""
+    # 1. 加载各检查结果
+    results = {
+        'completeness': json.loads(Path('completeness.json').read_text()) if Path(
+            'completeness.json').exists() else None,
+        'terms': json.loads(Path('terms.json').read_text()) if Path('terms.json').exists() else None,
+        'structure': json.loads(Path('structure.json').read_text()) if Path('structure.json').exists() else None
     }
 
-    # 生成报告部分
-    for name, text in reports.items():
-        if text:
-            content.append(f"<h2>{name.capitalize()} Issues</h2>")
-            content.append(markdown2.markdown(text))
-        else:
-            content.append(f'<p class="success">✅ No {name} issues found</p>')
+    # 2. 生成报告部分
+    for check_type, data in results.items():
+        if not data:
+            continue
 
-    # 保存HTML报告
-    html = f"<html><head>{css}</head><body>{''.join(content)}</body></html>"
-    Path("report.html").write_text(html, encoding='utf-8')
+        report.append(f"<h2>{check_type.capitalize()} Issues</h2>")
+
+        if data.get('status') == 'success':
+            report.append("<p>✅ No issues found</p>")
+            continue
+
+        for issue in data.get('issues', []):
+            if check_type == 'completeness':
+                report.append(f"""
+                <div class="issue missing">
+                    <h3>Missing: {issue}</h3>
+                </div>
+                """)
+            elif check_type == 'terms':
+                report.append(f"""
+                <div class="issue term">
+                    <h3>{issue['type'].capitalize()} term: {issue['term']}</h3>
+                    <p>File: {issue['file']}</p>
+                    <pre>{issue.get('snippet', '')}</pre>
+                </div>
+                """)
+            elif check_type == 'structure':
+                report.append(f"""
+                <div class="issue structure">
+                    <h3>Size anomaly: {issue['file']}</h3>
+                    <p>EN: {issue['en_size']}b → ZH: {issue['zh_size']}b (ratio: {issue['ratio']})</p>
+                </div>
+                """)
+
+    # 3. 保存HTML文件
+    html = f"<html><head>{css}</head><body>{''.join(report)}</body></html>"
+    Path('report.html').write_text(html)
+    Path('translation_issues.md').write_text("\n".join(
+        f"- {k}: {len(v['issues'])} issues"
+        for k, v in results.items()
+        if v and v.get('issues')
+    ))
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ jobs:
   translate-and-verify:
     runs-on: ubuntu-latest
     steps:
-      # 第一阶段：翻译
+      # 第一阶段：设置环境
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -34,13 +34,13 @@ jobs:
             mdcheck \
             termcolor
 
+      # 第二阶段：翻译与验证
       - name: Run free translation
         id: translate
         run: python scripts/integrated_translator.py
         env:
-          MAX_RETRIES: 3  # 失败重试次数
+          MAX_RETRIES: 3
 
-      # 第二阶段：验证
       - name: Verify completeness
         if: steps.translate.outcome == 'success'
         run: python scripts/verify_completeness.py --strict
@@ -53,22 +53,23 @@ jobs:
         if: steps.translate.outcome == 'success'
         run: python scripts/verify_structure.py --threshold 0.4
 
-      # 第三阶段：报告与PR
+      # 第三阶段：报告生成
       - name: Generate report
         if: always()
         run: |
           python scripts/generate_report.py
           echo "REPORT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-        continue-on-error: true
 
-      - name: Upload report
+      - name: Upload translation report
         uses: actions/upload-artifact@v3
         with:
           name: translation-report-${{ env.REPORT_DATE }}
           path: |
             report.html
             translation_issues.md
+          retention-days: 7  # 自动保留7天
 
+      # 第四阶段：创建PR
       - name: Create Pull Request
         if: steps.translate.outcome == 'success'
         uses: peter-evans/create-pull-request@v4
