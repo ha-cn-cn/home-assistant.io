@@ -26,7 +26,7 @@ jobs:
         run: python scripts/translate.py
 
       - name: Create PR if changes
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/current'
         uses: peter-evans/create-pull-request@v4
         with:
           title: "🌐 自动翻译更新"
