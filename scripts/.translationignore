@@ -1,0 +1,14 @@
+_includes/*
+_layouts/*
+_data/*
+*/_*.md
+*.png
+*.jpg
+*.gif
+*.svg
+*.ico
+*.json
+*.xml
+*.txt
+*.yml
+*.yaml
