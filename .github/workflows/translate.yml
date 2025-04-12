@@ -2,8 +2,8 @@ name: Auto Translate Documentation
 
 on:
   schedule:
-    - cron: '0 3 * * *' # 每天UTC时间3点运行（北京时间11点）
-  workflow_dispatch: # 允许手动触发
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   translate:
@@ -11,20 +11,17 @@ jobs:
     timeout-minutes: 120
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: Checkout source (English)
       uses: actions/checkout@v3
       with:
         repository: home-assistant/home-assistant.io
         path: source-en
-        fetch-depth: 0 # 获取完整历史记录
-
-    - name: Checkout target (Chinese)
-      uses: actions/checkout@v3
-      with:
-        repository: ha-cn-cn/home-assistant.io
-        path: source-cn
         token: ${{ secrets.PAT_TOKEN }}
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -37,13 +34,16 @@ jobs:
         pip install requests beautifulsoup4 markdown python-frontmatter tqdm
 
     - name: Run translation
-      run: python scripts/translate.py
+      run: |
+        echo "当前工作目录: $(pwd)"
+        ls -R scripts/
+        python scripts/translate.py
 
     - name: Commit and push changes
       run: |
         cd source-cn
-        git config --global user.name "HA Translation Bot"
-        git config --global user.email "translation-bot@ha-cn.org"
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
         git add .
         git diff --quiet && git diff --staged --quiet || git commit -m "Auto-translate: $(date +'%Y-%m-%d %H:%M:%S')"
         git push
